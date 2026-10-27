@@ -651,6 +651,52 @@ document.getElementById('btn-close-modal').onclick = () => modal.classList.remov
 
 // Start Game
 loadLevel(0);
+// --- QUẢN LÝ ĐIỂM CAO VÀ CHIA SẺ ---
+let maxUnlockedLevel = localStorage.getItem('appleWorm_maxLevel') || 1;
+
+function saveProgress(level) {
+    if (level > maxUnlockedLevel) {
+        maxUnlockedLevel = level;
+        localStorage.setItem('appleWorm_maxLevel', maxUnlockedLevel);
+        
+        const scoreDisplay = document.getElementById('high-score-display');
+        if (scoreDisplay) scoreDisplay.innerText = maxUnlockedLevel;
+    }
+}
+
+function shareGame() {
+    const gameUrl = window.location.href;
+    const shareText = "Hãy thử thách 100 màn giải đố cực hay cùng mình trong game Sâu Ăn Táo (Apple Worm) nhé: " + gameUrl;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'Sâu Ăn Táo - Apple Worm',
+            text: shareText,
+            url: gameUrl,
+        }).catch(() => {});
+    } else {
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(gameUrl)}`, '_blank');
+    }
+}
+
+function copyGameLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        alert("Đã sao chép đường link game! Hãy gửi cho bạn bè cùng chơi nhé.");
+    });
+}
 </script>
-</body>
+</body><!-- Khu vực hiển thị Điểm và Chia sẻ -->
+<div id="game-ui-overlay" style="text-align: center; margin: 10px 0; font-family: Arial, sans-serif;">
+    <div style="font-size: 16px; font-weight: bold; color: #d9534f; margin-bottom: 8px;">
+        🏆 Màn cao nhất đã đạt: <span id="high-score-display">1</span>/100
+    </div>
+    
+    <button onclick="shareGame()" style="background-color: #3b5998; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-right: 5px;">
+        📤 Chia sẻ Game
+    </button>
+    
+    <button onclick="copyGameLink()" style="background-color: #5cb85c; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+        🔗 Sao chép Link
+    </button>
+</div>
 </html>
