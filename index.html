@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sâu Ăn Táo - Apple Worm Game (100 Levels)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 100vw;
+            max-height: 100vh;
+            padding: 10px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 8px 16px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .level-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        .controls-top {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .legend {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.75rem;
+            background: rgba(0,0,0,0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        canvas {
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            background-color: #87CEEB;
+            touch-action: none;
+        }
+
+        /* D-Pad Controls for Mobile */
+        .mobile-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(2, 50px);
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .btn-pad {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            color: white;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+        .btn-pad:active {
+            background: rgba(59, 130, 246, 0.6);
+        }
+
+        .btn-up { grid-column: 2; grid-row: 1; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-down { grid-column: 2; grid-row: 2; }
+        .btn-right { grid-column: 3; grid-row: 2; }
+
+        /* Modal Overlay */
+        .modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 16px;
+            max-width: 90vw;
+            max-height: 80vh;
+            width: 450px;
+            text-align: center;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.5);
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin: 15px 0;
+            overflow-y: auto;
+            max-height: 50vh;
+            padding: 5px;
+        }
+
+        .level-btn {
+            padding: 10px;
+            background: #334155;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .level-btn.completed {
+            background: #10b981;
+        }
+
+        .level-btn.locked {
+            background: #0f172a;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .instruction-box {
+            position: absolute;
+            bottom: 120px;
+            background: rgba(0,0,0,0.7);
+            color: #fde047;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div class="header">
+            <div class="level-title" id="level-display">Màn 1 / 100</div>
+            <div class="controls-top">
+                <button id="btn-undo">↩ Đi lại</button>
+                <button id="btn-restart">🔄 Chơi lại</button>
+                <button id="btn-select">≡ Chọn Màn</button>
+            </div>
+        </div>
+
+        <div class="legend">
+            <span class="legend-item">🍎 Đỏ (+1)</span>
+            <span class="legend-item">🍏 Xanh (+2)</span>
+            <span class="legend-item">🌟 Vàng (+1/Thưởng)</span>
+            <span class="legend-item">☠️ Độc (-1)</span>
+            <span class="legend-item">⚠️ Gai (Chết)</span>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="instruction-box" id="instruction">Dùng phím mũi tên hoặc phím cảm ứng để di chuyển!</div>
+
+        <!-- Touch Controls -->
+        <div class="mobile-controls">
+            <div class="btn-pad btn-up" id="pad-up">▲</div>
+            <div class="btn-pad btn-left" id="pad-left">◀</div>
+            <div class="btn-pad btn-down" id="pad-down">▼</div>
+            <div class="btn-pad btn-right" id="pad-right">▶</div>
+        </div>
+    </div>
+
+    <!-- Level Selector Modal -->
+    <div class="modal" id="level-modal">
+        <div class="modal-content">
+            <h2>Danh Sách 100 Màn Chơi</h2>
+            <div class="level-grid" id="level-grid"></div>
+            <button id="btn-close-modal">Đóng</button>
+        </div>
+    </div>
+
+<script>
+// --- Web Audio Synthesizer ---
+class SoundManager {
+    constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    play(type) {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        if (type === 'move') {
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            osc.start(now); osc.stop(now + 0.05);
+        } else if (type === 'eat') {
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.12);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+            osc.start(now); osc.stop(now + 0.12);
+        } else if (type === 'win') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.setValueAtTime(400, now + 0.1);
+            osc.frequency.setValueAtTime(600, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+        } else if (type === 'die') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(50, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        }
+    }
+}
+
+const sounds = new SoundManager();
+
+// --- Game Engine ---
+const GRID_COLS = 16;
+const GRID_ROWS = 12;
+const CELL_SIZE = Math.min(window.innerWidth / (GRID_COLS + 1), (window.innerHeight - 180) / (GRID_ROWS + 1));
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = GRID_COLS * CELL_SIZE;
+canvas.height = GRID_ROWS * CELL_SIZE;
+
+let currentLevelIndex = 0;
+let unlockedLevels = parseInt(localStorage.getItem('apple_worm_unlocked') || '1');
+let history = [];
+
+// Game state
+let grid = [];
+let worm = []; // Array of {x, y}
+let portal = {x: 0, y: 0};
+let switches = [];
+let gates = [];
+let teleporters = [];
+let crumbleBlocks = [];
+let isScared = false;
+
+// 100 Procedural & Custom Levels Generator
+function generateLevel(levelNum) {
+    let map = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill('.'));
+    
+    // Default Walls & Ground Base
+    for(let c = 0; c < GRID_COLS; c++) { map[GRID_ROWS-1][c] = '#'; }
+    for(let r = 0; r < GRID_ROWS; r++) { map[r][0] = '#'; map[r][GRID_COLS-1] = '#'; }
+
+    // Custom Tutorial Levels (1-3)
+    if (levelNum === 1) {
+        // Simple Walk
+        for(let c=1; c<15; c++) map[8][c] = '#';
+        map[7][6] = 'Ar'; // Red Apple
+        return { map, worm: [{x:3, y:7}, {x:2, y:7}], portal: {x:12, y:7}, msg: "Dùng nút di chuyển để đi đến cổng Portal!" };
+    } else if (levelNum === 2) {
+        // Gap Bridge
+        for(let c=1; c<6; c++) map[8][c] = '#';
+        for(let c=10; c<15; c++) map[8][c] = '#';
+        map[7][3] = 'Ag'; // Green Apple (+2)
+        return { map, worm: [{x:2, y:7}, {x:1, y:7}], portal: {x:13, y:7}, msg: "Ăn Táo Xanh (🍏) để dài thêm 2 đốt bắc cầu vượt qua vực!" };
+    } else if (levelNum === 3) {
+        // Spikes & Poison
+        for(let c=1; c<15; c++) map[9][c] = '#';
+        map[8][6] = 'X'; map[8][7] = 'X'; // Spikes
+        map[8][4] = 'Ay'; // Yellow
+        return { map, worm: [{x:2, y:8}, {x:1, y:8}], portal: {x:12, y:8}, msg: "Tránh né Gai Nhọn (⚠️) nguy hiểm!" };
+    }
+
+    // Procedural Logic for Levels 4 to 100
+    const seed = levelNum * 997;
+    const pseudoRandom = (i) => Math.sin(seed + i) * 10000 - Math.floor(Math.sin(seed + i) * 10000);
+
+    // Dynamic Terrain
+    for (let c = 3; c < 13; c++) {
+        if (pseudoRandom(c) > 0.4) {
+            let h = Math.floor(pseudoRandom(c * 2) * 4) + 6;
+            map[h][c] = '#';
+        }
+    }
+
+    // Traps and Mechanics based on Level Difficulty
+    if (levelNum > 10 && pseudoRandom(1) > 0.5) map[7][5] = 'C'; // Crumble
+    if (levelNum > 20 && pseudoRandom(2) > 0.5) map[6][8] = 'X'; // Spike
+    if (levelNum > 40) map[5][7] = 'Ap'; // Poison
+
+    // Apples Placement
+    map[5][4] = pseudoRandom(3) > 0.5 ? 'Ar' : 'Ag';
+    if (levelNum > 30) map[4][10] = 'Ay';
+
+    return {
+        map,
+        worm: [{x: 2, y: 5}, {x: 1, y: 5}],
+        portal: {x: 13, y: 5},
+        msg: levelNum >= 51 ? "🔥 Màn Siêu Khó: Hãy tính toán kỹ từng bước đi!" : "Vượt qua thử thách và đến cổng Portal!"
+    };
+}
+
+function loadLevel(idx) {
+    currentLevelIndex = idx;
+    const levelData = generateLevel(idx + 1);
+    
+    // Parse Level Map
+    grid = levelData.map;
+    worm = JSON.parse(JSON.stringify(levelData.worm));
+    portal = levelData.portal;
+    history = [];
+    
+    document.getElementById('level-display').innerText = `Màn ${idx + 1} / 100`;
+    document.getElementById('instruction').innerText = levelData.msg;
+
+    saveState();
+    draw();
+}
+
+function saveState() {
+    history.push({
+        worm: JSON.parse(JSON.stringify(worm)),
+        grid: JSON.parse(JSON.stringify(grid))
+    });
+}
+
+function undo() {
+    if (history.length > 1) {
+        history.pop();
+        const lastState = history[history.length - 1];
+        worm = JSON.parse(JSON.stringify(lastState.worm));
+        grid = JSON.parse(JSON.stringify(lastState.grid));
+        draw();
+    }
+}
+
+// Movement & Gravity Logic
+function move(dx, dy) {
+    const head = { x: worm[0].x + dx, y: worm[0].y + dy };
+
+    // Wall collision
+    if (head.x < 0 || head.x >= GRID_COLS || head.y < 0 || head.y >= GRID_ROWS) return;
+    if (grid[head.y][head.x] === '#') return;
+
+    // Self collision
+    if (worm.some((seg, i) => i !== worm.length - 1 && seg.x === head.x && seg.y === head.y)) return;
+
+    saveState();
+    sounds.play('move');
+
+    let grow = 0;
+    let cell = grid[head.y][head.x];
+
+    // Handle Apples
+    if (cell.startsWith('A')) {
+        sounds.play('eat');
+        if (cell === 'Ar') grow = 1;
+        else if (cell === 'Ag') grow = 2;
+        else if (cell === 'Ay') grow = 1;
+        else if (cell === 'Ap') {
+            if (worm.length > 2) worm.pop(); // Poison shrinks
+        }
+        grid[head.y][head.x] = '.';
+    }
+
+    // Move worm body
+    worm.unshift(head);
+    if (grow === 0) {
+        worm.pop();
+    } else if (grow === 2) {
+        // Add 1 extra segment for green apple
+        worm.push({ ...worm[worm.length - 1] });
+    }
+
+    // Apply Gravity
+    applyGravity();
+
+    // Check Traps & Portal
+    checkGameState();
+
+    draw();
+}
+
+function applyGravity() {
+    let falling = true;
+    while (falling) {
+        // Check if supported
+        let supported = worm.some(seg => {
+            let belowY = seg.y + 1;
+            if (belowY >= GRID_ROWS) return true;
+            if (grid[belowY][seg.x] === '#') return true;
+            return false;
+        });
+
+        if (!supported) {
+            worm.forEach(seg => seg.y += 1);
+            isScared = true;
+        } else {
+            falling = false;
+            isScared = false;
+        }
+    }
+}
+
+function checkGameState() {
+    const head = worm[0];
+
+    // Check Spikes
+    if (grid[head.y][head.x] === 'X' || head.y >= GRID_ROWS - 1) {
+        sounds.play('die');
+        alert("Bạn đã thua! Thử lại nhé.");
+        loadLevel(currentLevelIndex);
+        return;
+    }
+
+    // Check Portal Win
+    if (head.x === portal.x && head.y === portal.y) {
+        sounds.play('win');
+        alert(`Chúc mừng! Bạn đã hoàn thành Màn ${currentLevelIndex + 1}!`);
+        if (currentLevelIndex + 1 >= unlockedLevels) {
+            unlockedLevels = Math.min(100, currentLevelIndex + 2);
+            localStorage.setItem('apple_worm_unlocked', unlockedLevels.toString());
+        }
+        loadLevel(currentLevelIndex + 1);
+    }
+}
+
+// --- Drawing & Graphics Engine ---
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Grid & Map
+    for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+            let cell = grid[r][c];
+            let x = c * CELL_SIZE;
+            let y = r * CELL_SIZE;
+
+            // Dirt Wall
+            if (cell === '#') {
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                ctx.fillStyle = '#4a2e16';
+                ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            }
+            // Spikes
+            else if (cell === 'X') {
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.moveTo(x + CELL_SIZE/2, y + 4);
+                ctx.lineTo(x + 4, y + CELL_SIZE);
+                ctx.lineTo(x + CELL_SIZE - 4, y + CELL_SIZE);
+                ctx.fill();
+            }
+            // Apples
+            else if (cell.startsWith('A')) {
+                drawApple(x, y, cell);
+            }
+        }
+    }
+
+    // Draw Portal
+    drawPortal(portal.x * CELL_SIZE, portal.y * CELL_SIZE);
+
+    // Draw Worm
+    drawWorm();
+}
+
+function drawApple(x, y, type) {
+    let color = '#ef4444'; // Red
+    if (type === 'Ag') color = '#22c55e'; // Green
+    if (type === 'Ay') color = '#eab308'; // Yellow
+    if (type === 'Ap') color = '#a855f7'; // Poison Purple
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2 + 2, CELL_SIZE/2.5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = color;
+
+    // Stem & Leaf
+    ctx.fillStyle = '#15803d';
+    ctx.fillRect(x + CELL_SIZE/2 - 1, y + 2, 3, 6);
+    ctx.restore();
+}
+
+function drawPortal(x, y) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE/2 - 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#8b5cf6';
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#c084fc';
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawWorm() {
+    worm.forEach((seg, i) => {
+        let x = seg.x * CELL_SIZE;
+        let y = seg.y * CELL_SIZE;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE/2 - 1, 0, Math.PI * 2);
+        ctx.fillStyle = i === 0 ? '#10b981' : '#34d399'; // Head vs Body
+        ctx.fill();
+
+        // Eyes for Head
+        if (i === 0) {
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x + CELL_SIZE/3, y + CELL_SIZE/3, isScared ? 5 : 4, 0, Math.PI * 2);
+            ctx.arc(x + (2*CELL_SIZE)/3, y + CELL_SIZE/3, isScared ? 5 : 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(x + CELL_SIZE/3, y + CELL_SIZE/3, 2, 0, Math.PI * 2);
+            ctx.arc(x + (2*CELL_SIZE)/3, y + CELL_SIZE/3, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    });
+}
+
+// --- Controls & UI Modal ---
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowUp' || e.key === 'w') move(0, -1);
+    if (e.key === 'ArrowDown' || e.key === 's') move(0, 1);
+    if (e.key === 'ArrowLeft' || e.key === 'a') move(-1, 0);
+    if (e.key === 'ArrowRight' || e.key === 'd') move(1, 0);
+    if (e.key === 'z') undo();
+    if (e.key === 'r') loadLevel(currentLevelIndex);
+});
+
+document.getElementById('pad-up').onclick = () => move(0, -1);
+document.getElementById('pad-down').onclick = () => move(0, 1);
+document.getElementById('pad-left').onclick = () => move(-1, 0);
+document.getElementById('pad-right').onclick = () => move(1, 0);
+
+document.getElementById('btn-undo').onclick = undo;
+document.getElementById('btn-restart').onclick = () => loadLevel(currentLevelIndex);
+
+// Level Modal Logic
+const modal = document.getElementById('level-modal');
+const gridContainer = document.getElementById('level-grid');
+
+document.getElementById('btn-select').onclick = () => {
+    gridContainer.innerHTML = '';
+    for (let i = 0; i < 100; i++) {
+        const btn = document.createElement('button');
+        btn.className = `level-btn ${i < unlockedLevels ? 'completed' : 'locked'}`;
+        btn.innerText = i + 1;
+        if (i < unlockedLevels) {
+            btn.onclick = () => {
+                loadLevel(i);
+                modal.classList.remove('active');
+            };
+        }
+        gridContainer.appendChild(btn);
+    }
+    modal.classList.add('active');
+};
+
+document.getElementById('btn-close-modal').onclick = () => modal.classList.remove('active');
+
+// Start Game
+loadLevel(0);
+</script>
+</body>
+</html>
